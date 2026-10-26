@@ -1,0 +1,284 @@
+{
+  "name": "Renewal Follow-Up Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Renewal Follow-Up Demo\nSample-data demo using fictional accounts. All data is fictional. No emails or messages are sent and no outreach happens.\n\nPurpose: identify upcoming renewals (within 90 days) and prioritize outreach - at-risk accounts (health score < 60) get High priority, others Normal.\n\n## Contact Verification\nThe LinkedIn and Google (ZoomInfo) links are research search links only. They do NOT confirm or verify any contact. Every record stays \"Pending manual review\" until a person checks it.",
+        "height": 260,
+        "width": 700,
+        "color": 4
+      },
+      "name": "Demo Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -208
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { accountName: 'Acme Manufacturing', daysUntilRenewal: 45, annualValue: 24000, healthScore: 45 } },\n  { json: { accountName: 'Summit Logistics', daysUntilRenewal: 75, annualValue: 18000, healthScore: 85 } },\n  { json: { accountName: 'Harbor Services', daysUntilRenewal: 150, annualValue: 12000, healthScore: 70 } },\n];"
+      },
+      "name": "Sample Renewal Accounts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "due-90",
+              "leftValue": "={{ $json.daysUntilRenewal }}",
+              "rightValue": 90,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Due Within 90 Days",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => {\n  const accountName = String(item.json.accountName || '');\n  return {\n    json: {\n      ...item.json,\n      linkedInSearchUrl: 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(accountName + ' procurement finance'),\n      zoomInfoSearchUrl: 'https://www.google.com/search?q=' + encodeURIComponent('site:zoominfo.com ' + accountName + ' procurement finance'),\n      contactVerified: false,\n      contactVerificationStatus: 'Pending manual review',\n      verificationChecklist: 'Confirm company identity, current employer, role in renewal, and contact details before outreach',\n    },\n  };\n});"
+      },
+      "name": "Build Contact Research Links",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "requiredContactRoles",
+              "value": "Renewal owner; Procurement; Finance",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "researchOnly",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "name": "Contact Verification Checklist",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        944,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "health-lt-60",
+              "leftValue": "={{ $json.healthScore }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Account At Risk",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "priority",
+              "value": "High",
+              "type": "string"
+            },
+            {
+              "id": "p2",
+              "name": "nextAction",
+              "value": "Schedule a renewal risk review",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "name": "Prepare Priority Outreach",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1424,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "priority",
+              "value": "Normal",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "nextAction",
+              "value": "Schedule a renewal planning call",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "name": "Prepare Standard Follow-Up",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1424,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Sample Renewal Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample Renewal Accounts": {
+      "main": [
+        [
+          {
+            "node": "Due Within 90 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due Within 90 Days": {
+      "main": [
+        [
+          {
+            "node": "Build Contact Research Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Contact Research Links": {
+      "main": [
+        [
+          {
+            "node": "Contact Verification Checklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Verification Checklist": {
+      "main": [
+        [
+          {
+            "node": "Account At Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account At Risk": {
+      "main": [
+        [
+          {
+            "node": "Prepare Priority Outreach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Standard Follow-Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
