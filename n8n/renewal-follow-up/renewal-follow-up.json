@@ -8,13 +8,13 @@
       "typeVersion": 1,
       "position": [
         0,
-        -600
+        -450
       ],
       "parameters": {
-        "content": "# Renewal Follow-Up Demo\n60-day email → 30-day call → 7-day email + call → weekly until renewed or churned.\nContact research • Template email drafts • Risk-based prioritization\n## Full details and workflow code on GitHub\n### [github.com/Marhey/practical-ai-workflows](https://github.com/Marhey/practical-ai-workflows/tree/main/n8n/renewal-follow-up)\nSample-data portfolio demo built with AI assistance. No emails sent. Manual review required.",
+        "content": "# Renewal Follow-Up Demo\n## 60-day email → 30-day call → 7-day email + call → weekly until resolution\n# Full details and workflow code on GitHub\n# [github.com/Marhey/practical-ai-workflows](https://github.com/Marhey/practical-ai-workflows/tree/main/n8n/renewal-follow-up)\nSample-data demo built with AI assistance. Template drafts and call tasks only. No emails sent.",
         "color": 4,
         "width": 2300,
-        "height": 300
+        "height": 350
       }
     },
     {
