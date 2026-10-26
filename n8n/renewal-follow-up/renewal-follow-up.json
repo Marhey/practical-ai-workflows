@@ -7,14 +7,14 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        100,
-        300
+        0,
+        -600
       ],
       "parameters": {
-        "content": "## Renewal milestone cadence demo\n60 days: email. 30 days: call. 7 days: email and call, then weekly until renewed or churned (continues past expiry).\nDrafts are template generated text, not AI generation. No Gmail drafts, messages or live schedule exist. Contact verification stays pending manual review. Fixture based duplicate check only.",
+        "content": "# Renewal Follow-Up Demo\n60-day email → 30-day call → 7-day email + call → weekly until renewed or churned.\nContact research • Template email drafts • Risk-based prioritization\n## Full details and workflow code on GitHub\n### [github.com/Marhey/practical-ai-workflows](https://github.com/Marhey/practical-ai-workflows/tree/main/n8n/renewal-follow-up)\nSample-data portfolio demo built with AI assistance. No emails sent. Manual review required.",
         "color": 4,
-        "width": 700,
-        "height": 120
+        "width": 2300,
+        "height": 300
       }
     },
     {
@@ -23,8 +23,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        100,
-        450
+        0,
+        96
       ],
       "parameters": {}
     },
@@ -34,8 +34,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        300,
-        450
+        224,
+        96
       ],
       "parameters": {
         "jsCode": "const rows = [\n  ['acct-1001', 'Acme Manufacturing', 'open', 60, 'Jordan Rivera', 'jordan.rivera@example.com', 45, 24000, [], null],\n  ['acct-1002', 'Summit Logistics', 'open', 30, 'Casey Morgan', 'casey.morgan@example.com', 85, 18000, ['email60'], null],\n  ['acct-1003', 'Harbor Services', 'open', 7, 'Riley Chen', 'riley.chen@example.com', 55, 31000, ['email60', 'call30'], null],\n  ['acct-1004', 'Northwind Foods', 'open', 0, 'Taylor Brooks', 'taylor.brooks@example.com', 72, 15000, ['email60', 'call30', 'combined7'], 7],\n  ['acct-1005', 'Bluebird Analytics', 'open', -7, 'Avery Patel', 'avery.patel@example.com', 40, 27000, ['email60', 'call30', 'combined7'], 3],\n  ['acct-1006', 'Cedar Health', 'renewed', 7, 'Morgan Lee', 'morgan.lee@example.com', 90, 22000, ['email60', 'call30'], null],\n  ['acct-1007', 'Dune Robotics', 'churned', -7, 'Sam Ortiz', 'sam.ortiz@example.com', 30, 19000, ['email60', 'call30', 'combined7'], 10],\n  ['acct-1008', 'Evergreen Supply', 'open', 60, 'Drew Nguyen', 'drew.nguyen@example.com', 65, 12000, ['email60'], null],\n  ['acct-1009', 'Falcon Media', 'open', 45, 'Jamie Foster', 'jamie.foster@example.com', 78, 9000, ['email60'], null],\n];\nreturn rows.map((r, i) => ({ json: {\n  accountId: r[0],\n  renewalCycleId: 'RC-2026-' + r[0].slice(-4),\n  accountName: r[1],\n  renewalStatus: r[2],\n  daysUntilRenewal: r[3],\n  contactName: r[4],\n  contactEmail: r[5],\n  healthScore: r[6],\n  annualValue: r[7],\n  completedMilestones: r[8],\n  lastCombinedOutreachDaysAgo: r[9],\n} }));"
@@ -47,8 +47,8 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.4,
       "position": [
-        500,
-        450
+        448,
+        96
       ],
       "parameters": {
         "conditions": {
@@ -80,8 +80,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        700,
-        450
+        752,
+        48
       ],
       "parameters": {
         "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const a = item.json;\n  const d = Number(a.daysUntilRenewal);\n  const done = Array.isArray(a.completedMilestones) ? a.completedMilestones : [];\n  const last = (a.lastCombinedOutreachDaysAgo === null || a.lastCombinedOutreachDaysAgo === undefined) ? null : Number(a.lastCombinedOutreachDaysAgo);\n  const base = a.accountId + ':' + a.renewalCycleId + ':';\n  let due = false, milestone = null, channels = [], reason = '', actionKey = null, stage = '', next = null;\n  if (a.renewalStatus !== 'open') {\n    stage = 'resolved'; reason = 'Renewal is ' + a.renewalStatus + ', no further outreach';\n  } else if (d > 60) {\n    stage = 'waiting'; next = d - 60; reason = 'More than 60 days out, first email milestone not reached';\n  } else if (d >= 31) {\n    stage = 'email60'; next = d - 30; milestone = 'email60'; actionKey = base + 'email60';\n    if (done.includes('email60') || done.includes(actionKey)) { reason = 'Duplicate suppressed: email60 already completed'; }\n    else { due = true; channels = ['email']; reason = '31 to 60 days out and email60 not completed'; }\n  } else if (d >= 8) {\n    stage = 'call30'; next = d - 7; milestone = 'call30'; actionKey = base + 'call30';\n    if (done.includes('call30') || done.includes(actionKey)) { reason = 'Duplicate suppressed: call30 already completed'; }\n    else { due = true; channels = ['phone']; reason = '8 to 30 days out and call30 not completed (missed email60 skipped)'; }\n  } else {\n    stage = 'combined_weekly';\n    const prior = last !== null || done.includes('combined7');\n    if (!prior) {\n      milestone = 'combined7'; actionKey = base + 'combined7'; due = true; channels = ['email', 'phone']; next = 7;\n      reason = '7 days or less and no prior combined outreach (earlier milestones skipped)';\n    } else if (last === null) {\n      next = 7; reason = 'Combined outreach recorded without a date, persist last completed combined date';\n    } else {\n      const bucket = Math.floor((7 - d) / 7);\n      milestone = 'weekly'; actionKey = base + 'weekly:' + bucket;\n      if (done.includes(actionKey)) { next = 7; reason = 'Duplicate suppressed: weekly action ' + bucket + ' already completed'; }\n      else if (last >= 7) { due = true; channels = ['email', 'phone']; next = 7; reason = 'Weekly combined outreach due: ' + last + ' days since last combined action'; }\n      else { next = 7 - last; reason = 'Not due: only ' + last + ' days since last combined action'; }\n    }\n  }\n  out.push({ json: {\n    ...a,\n    cadenceDue: due,\n    cadenceStage: stage,\n    dueMilestone: milestone,\n    actionChannels: channels,\n    actionKey: actionKey,\n    cadenceReason: reason,\n    nextActionDueInDays: next,\n    stateUpdateInstructions: 'Demo only, nothing is persisted. In production, after the action is actually completed (not when a draft is created), persist to a durable CRM or database: renewal status, completed milestone (' + (milestone || 'none') + '), last completed combined date, and action key (' + (actionKey || 'none') + '). Check stored action keys before drafting to prevent duplicates across executions.',\n  } });\n}\nreturn out;"
@@ -93,8 +93,8 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.4,
       "position": [
-        900,
-        450
+        976,
+        48
       ],
       "parameters": {
         "conditions": {
@@ -127,8 +127,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
-        450
+        1280,
+        224
       ],
       "parameters": {
         "jsCode": "return $input.all().map((item) => {\n  const accountName = String(item.json.accountName || '');\n  return {\n    json: {\n      ...item.json,\n      linkedInSearchUrl: 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(accountName + ' procurement finance'),\n      zoomInfoSearchUrl: 'https://www.google.com/search?q=' + encodeURIComponent('site:zoominfo.com ' + accountName + ' procurement finance'),\n      contactVerified: false,\n      contactVerificationStatus: 'Pending manual review',\n      verificationChecklist: 'Confirm company identity, current employer, role in renewal, and contact details before outreach',\n    },\n  };\n});"
@@ -140,8 +140,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1300,
-        450
+        1504,
+        224
       ],
       "parameters": {
         "assignments": {
@@ -170,8 +170,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1500,
-        450
+        1808,
+        320
       ],
       "parameters": {
         "jsCode": "return $input.all().map((item) => {\n  const a = item.json;\n  const d = Number(a.daysUntilRenewal);\n  const channels = Array.isArray(a.actionChannels) ? a.actionChannels : [];\n  const first = String(a.contactName || 'there').split(' ')[0];\n  let timing, subjectTail;\n  if (d > 0) { timing = 'is coming up in ' + d + (d === 1 ? ' day' : ' days'); subjectTail = 'renewal in ' + d + (d === 1 ? ' day' : ' days'); }\n  else if (d === 0) { timing = 'reaches its expiration date today'; subjectTail = 'renewal expires today'; }\n  else { timing = 'passed its expiration date ' + Math.abs(d) + (Math.abs(d) === 1 ? ' day' : ' days') + ' ago'; subjectTail = 'renewal expired ' + Math.abs(d) + ' days ago'; }\n  let opener;\n  if (a.dueMilestone === 'email60') opener = 'I wanted to start the renewal conversation early so you have plenty of time to plan.';\n  else if (a.dueMilestone === 'call30') opener = 'I would like to schedule a short call to talk through your renewal.';\n  else if (d < 0) opener = 'I wanted to check in again and see how we can help move your renewal forward.';\n  else opener = 'I am checking in again to make sure your renewal has the attention it needs.';\n  const json = { ...a };\n  if (channels.includes('email')) {\n    json.emailSubject = a.accountName + ' ' + subjectTail;\n    json.emailBody = 'Hi ' + first + ',\\n\\nYour ' + a.accountName + ' renewal ' + timing + '. ' + opener + ' Please let me know a good time to talk or if there is anything you would like us to review together.\\n\\nThank you,\\nMarcus';\n  }\n  if (channels.includes('phone')) {\n    json.callTask = 'Call ' + a.contactName + ' at ' + a.accountName + ' about the renewal that ' + timing + '. Confirm the contact is verified before dialing, then log the outcome.';\n  }\n  json.approvalStatus = 'Needs review';\n  json.deliveryStatus = 'Not sent';\n  json.draftSource = 'Template generated, not AI generated';\n  return { json };\n});"
@@ -183,8 +183,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1700,
-        450
+        2032,
+        96
       ],
       "parameters": {
         "conditions": {
@@ -216,8 +216,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1900,
-        450
+        2256,
+        0
       ],
       "parameters": {
         "assignments": {
@@ -246,8 +246,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1900,
-        600
+        2256,
+        192
       ],
       "parameters": {
         "assignments": {
@@ -387,40 +387,40 @@
     {
       "id": "24322992-7ea9-40de-9098-680e10c0a2a5",
       "name": "Load open renewals",
+      "description": "Fictional sample accounts; resolved (renewed or churned) renewals stop here",
       "nodeIds": [
         "3cac6fe7-4c58-4c49-9091-73adb3a8b250",
         "079ae914-b44c-4137-a418-6b70dbacb406"
-      ],
-      "description": "Fictional sample accounts; resolved (renewed or churned) renewals stop here"
+      ]
     },
     {
       "id": "3a7fa461-0d00-4dec-a463-a6c9517da2ee",
       "name": "Evaluate milestone cadence",
+      "description": "Applies 60, 30 and 7 day rules plus weekly repeats; non due items keep a reason",
       "nodeIds": [
         "66cf146b-93ac-4507-9a39-bf530780635d",
         "4a65c980-f5de-43ea-9dfd-b2bba201e190"
-      ],
-      "description": "Applies 60, 30 and 7 day rules plus weekly repeats; non due items keep a reason"
+      ]
     },
     {
       "id": "5c28d671-d52f-48e3-a9c7-611f7841d353",
       "name": "Contact Verification",
+      "description": "Adds research-only search links and a pending manual-review checklist; no contact is verified or messaged",
       "nodeIds": [
         "7e16a8c0-6b60-4951-9c07-55f202dd52b4",
         "9b09dbbd-5ece-4745-9744-1a8a8d89fa61"
-      ],
-      "description": "Adds research-only search links and a pending manual-review checklist; no contact is verified or messaged"
+      ]
     },
     {
       "id": "a52f7636-7001-4dab-8af0-12b593d7d113",
       "name": "Draft and prioritize",
+      "description": "Template drafts needing review, then High or Normal priority by health score",
       "nodeIds": [
         "610592aa-5615-4eb0-8db4-0b86859e2298",
         "b98bf5a9-81c7-4e4f-b0f1-144f958d8c29",
         "054254dd-d03b-4708-81b8-c413e5101780",
         "8f94d222-8d9d-4b35-b5e7-71d34081c32f"
-      ],
-      "description": "Template drafts needing review, then High or Normal priority by health score"
+      ]
     }
   ]
 }
