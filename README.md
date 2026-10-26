@@ -2,7 +2,13 @@
 
 A small collection of reusable prompts and worked examples for turning messy business information into clear next steps.
 
-**Status:** Initial portfolio edition. These are manual, tool-independent workflows, not deployed integrations. The examples and expected outputs below are illustrative and use fictional data. Drafted with AI assistance.
+**Status:** Portfolio examples using fictional data and AI assistance. The prompt examples below are manual workflows. The n8n demo is implemented and tested, with no live email delivery or CRM integration.
+
+## n8n renewal automation demo
+
+[View full details and importable workflow code](n8n/renewal-follow-up/README.md)
+
+A tested n8n demo covering 60-day email preparation, 30-day call tasks, 7-day email and call preparation, weekly follow-ups until resolution, contact research, and account risk routing. Includes template-generated drafts and nine fictional account scenarios.
 
 ## Start here
 
