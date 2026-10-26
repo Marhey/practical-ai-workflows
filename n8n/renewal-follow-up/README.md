@@ -1,36 +1,39 @@
 # Renewal Follow-Up Demo
 
-An AI-assisted n8n portfolio demo that identifies upcoming renewals, prepares contact research links, and prioritizes follow-up actions using fictional account data.
+An AI-assisted n8n portfolio demo for renewal milestones, contact research, email drafting, and call task preparation. Uses fictional accounts and template-generated text. No credentials are required.
 
-## What it does
+## Milestone cadence
 
-1. Starts manually.
-2. Loads three fictional sample accounts.
-3. Keeps accounts with renewals due within 90 days.
-4. Builds LinkedIn people-search links and Google searches restricted to ZoomInfo.
-5. Adds a contact verification checklist and a Pending manual review status.
-6. Routes health scores below 60 to priority outreach preparation; other accounts go to standard follow-up preparation.
+| Time before expiration | Prepared action |
+| --- | --- |
+| 60 days | Personalized renewal email draft |
+| 30 days | Phone call task |
+| 7 days | Email draft and phone call task |
+| Every 7 days afterward | Repeat email and phone preparation while unresolved, including after expiration |
+| Renewed or churned | Stop outreach preparation |
 
-The workflow prepares next actions only. It does not verify contacts automatically, pause for approval, connect to a CRM, call an external service, or send outreach. All records have contactVerified set to false. The contact checklist is reference information, not a completed verification step.
+The demo catches a missed milestone within its active window: 31 through 60 days for the initial email, 8 through 30 days for the call, and 7 days or fewer for combined outreach. Later stages supersede missed earlier stages. Weekly outreach is due when the previous combined action was completed at least 7 days ago, or none has been completed.
 
-## Run it
+## Workflow
 
-Import `renewal-follow-up.json` into n8n, open the editor, and select Execute workflow. No credentials are required. Inspect the output of each final node to see the account, contact research links, checklist, priority, and next action.
+Manual trigger → fictional accounts → stop resolved renewals → evaluate milestone cadence → filter due actions → contact research links and checklist → prepare email and call drafts → route by account health.
 
-## Sample test results
+LinkedIn people searches and Google searches restricted to ZoomInfo are research links. They do not establish a company match or verify a contact. Contact status remains Pending manual review. Health scores below 60 receive High priority; others receive Normal priority.
 
-Tested in n8n on October 26, 2026. Both output branches completed successfully.
+Email subject and body are generated from templates using fictional account details and renewal timing. Wording distinguishes upcoming expiration, expiration today, and elapsed expiration. No price, discount, contract term, or service interruption is invented. Drafts require review. Call tasks are generated only for milestones that include a phone call.
 
-| Fictional account | Days until renewal | Health score | Expected result |
-| --- | --- | --- | --- |
-| Acme Manufacturing | 45 | 45 | High priority; schedule a renewal risk review |
-| Summit Logistics | 75 | 85 | Normal priority; schedule a renewal planning call |
-| Harbor Services | 150 | 70 | Excluded by the 90-day filter |
+## Run the demo
 
-Both retained accounts carry research links and Pending manual review status. A search link is not evidence of a matched company or verified contact. Company identity, current employer, renewal responsibility, and contact details must be checked by a person before any real outreach.
+Import `renewal-follow-up.json` into n8n, select Execute workflow, and inspect the cadence node and final output nodes. The manual trigger simulates a daily review. This workflow does not create Gmail or Outlook draft objects, send emails, dial calls, or run on a live schedule.
 
-## Design choices
+## State and production requirements
 
-A manual trigger and fictional data make the demo easy to reproduce without customer systems. The 90-day window and health threshold are illustrative business rules. No live enrichment integration or measured business impact is claimed.
+Duplicate checks use fixture fields for completed milestones and elapsed days since the last combined outreach. Deterministic action keys identify the account, renewal cycle, and milestone or weekly bucket. This demo does not persist state across executions. Re-running unchanged fixtures can prepare the same drafts again.
 
-Built and tested with AI assistance, including n8n Assistant. Future work could replace sample input with authorized CRM data, add a human approval step, and integrate licensed enrichment services.
+For production, connect a daily schedule and authorized CRM or database. Read the current renewal status, real expiration date, contact verification, completed milestones, prior action keys, and last completed combined outreach date on each run. Use durable uniqueness/locking to avoid duplicate tasks. Persist completion only after the real action succeeds; generating a draft must not count as a sent email or completed call. Track email and call completion separately for partial failures. Recheck renewed/churned status and contact verification before any real outreach. Add a human approval step and email draft integration if desired.
+
+## Validation
+
+The sample set covers 60-day email, 30-day call, 7-day combined outreach, expiration-day weekly repeat, recent outreach suppression, renewed stop, churned stop, completed initial milestone suppression, and no action between milestones. Expected totals: 9 accounts, 2 resolved stopped, 7 evaluated, 4 due, 3 suppressed, 3 email drafts, and 3 call tasks.
+
+Built and tested with AI assistance, including n8n Assistant. This is a portfolio demonstration, not a deployed customer system or a claim of measured business results.
